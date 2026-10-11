@@ -1,4 +1,4 @@
-# 🏦 Bank Customer Churn & Retention Analysis
+#  Bank Customer Churn & Retention Analysis
 
 ## Executive Summary
 
@@ -14,7 +14,7 @@ The project ultimately translates customer-level churn patterns into **actionabl
 
 ---
 
-## 🎯 Business Problem
+## Business Problem
 
 A bank experiencing a ~20% customer churn rate needs more than a headline churn percentage.
 
@@ -33,7 +33,7 @@ The objective is therefore to transform raw customer data into a **prioritized r
 
 ---
 
-# 📊 Dataset Overview
+# Dataset Overview
 
 | Metric                   |          Value |
 | ------------------------ | -------------: |
@@ -96,7 +96,7 @@ Before analysing churn behaviour, the dataset was subjected to structural and lo
 
 ---
 
-## 📈 2. Portfolio Retention Performance
+## 2. Portfolio Retention Performance
 
 The overall portfolio churn rate is **20.37%**, meaning approximately 1 in 5 customers has exited.
 
@@ -110,7 +110,7 @@ This makes retention a **value-protection problem**, not simply a customer-count
 
 ---
 
-## 👥 3. Demographic Risk Segmentation
+## 3. Demographic Risk Segmentation
 
 ### Age
 
@@ -160,7 +160,7 @@ Because Germany also carries approximately **$300M** in customer balances, this 
 
 ---
 
-## 🎯 4. Highest-Risk Customer Segments
+## 4. Highest-Risk Customer Segments
 
 Combining Geography × Gender × Age reveals concentrated pockets of risk.
 
@@ -416,7 +416,7 @@ This transforms the model from a purely statistical classifier into a **decision
 
 ---
 
-## 🔍 Model Explainability
+## Model Explainability
 
 Model interpretation will identify the variables contributing most strongly to predicted churn.
 
@@ -435,7 +435,7 @@ This enables the bank to connect predictions to appropriate retention actions.
 
 ---
 
-## 💳 Customer Risk Scoring
+## Customer Risk Scoring
 
 The final model will produce a customer-level risk score.
 
@@ -457,7 +457,7 @@ This ensures the bank does not simply target the customers most likely to churn,
 
 ---
 
-## 💼 Business Impact Framework
+## Business Impact Framework
 
 The final ML evaluation will measure more than model accuracy.
 
@@ -476,7 +476,7 @@ The intended output is a **prioritized retention portfolio**, not merely a predi
 
 ---
 
-## 🎯 Recommended Retention Strategy
+## Recommended Retention Strategy
 
 Based on the EDA, the bank should consider a differentiated retention framework:
 
@@ -500,7 +500,7 @@ Based on the EDA, the bank should consider a differentiated retention framework:
 
 ---
 
-## 🏆 Executive Takeaway
+## Executive Takeaway
 
 The analysis demonstrates that bank churn is **not evenly distributed** across the customer base.
 
@@ -528,7 +528,7 @@ That is the foundation for a scalable **customer retention analytics and predict
 
 ---
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 * **Analytics & Programming:** [ Python, Pandas, NumPy,]
 
