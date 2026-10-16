@@ -364,7 +364,7 @@ The strongest retention signals emerge when activity, product depth, card owners
 
 ---
 
-## 🏆 Model Selection: Best Model & Evaluation Method
+## Model Selection: Best Model & Evaluation Method
 
 **Evaluation Method:** All three models were scored on the held-out 20% test set (never seen during training) across five metrics — Precision, Recall, F1, ROC-AUC, and PR-AUC.
 
@@ -384,7 +384,7 @@ The strongest retention signals emerge when activity, product depth, card owners
 
 ---
 
-## 🎚 Threshold Optimization
+## Threshold Optimization
 
 The default 0.5 classification threshold is a statistical convention, not a business decision. Because missing a churner (false negative) costs the bank far more than one wasted retention offer (false positive), the threshold was re-optimized to favor recall, subject to a minimum precision floor of 35% (so outreach campaigns aren't mostly wasted effort).
 
@@ -398,7 +398,7 @@ At the business-optimal threshold, the model captures **89.2%** of actual churne
 
 ---
 
-## 🔍 Model Explainability (SHAP)
+## Model Explainability (SHAP)
 
 Beyond feature importances, SHAP (SHapley Additive exPlanations) was used to:
 
@@ -407,7 +407,7 @@ Beyond feature importances, SHAP (SHapley Additive exPlanations) was used to:
 
 ---
 
-## 💰 Business Impact
+## Business Impact
 
 Every customer was scored with the final model and assigned a risk tier:
 
