@@ -338,195 +338,98 @@ The strongest retention signals emerge when activity, product depth, card owners
 
 ---
 
-## Machine Learning Strategy
+# Machine Learning Pipeline
 
-The EDA establishes the business context for a predictive churn model.
+## Feature Engineering & Leakage Audit
 
-The machine-learning workflow is designed to answer:
+- Dropped pure identifiers (`RowNumber`, `CustomerId`, `Surname`) — no predictive value, leakage/PII risk.
+- Dropped EDA-only derived groupings (`AgeGroup`, `BalanceBand`, etc.) in favor of their underlying raw numeric/categorical fields, to avoid redundant double-counting of the same signal.
+- Engineered 6 new features (`BalanceSalaryRatio`, `IsZeroBalance`, `TenureAgeRatio`, `IsOverExtended`, `EngagementScore`, `CreditPerAge`) — confirmed none derive from or leak the target.
+- Final model used **16 features**, one-hot encoded for Geography and Gender.
 
-> **Which customers are most likely to churn, and how should the bank prioritize intervention?**
+## Train/Test Strategy
 
-### Feature Engineering
+- **Stratified 80/20 split** — preserves the ~20% churn rate in both train and test sets.
+- Class imbalance (~3.9:1 retained:churned) handled via `class_weight='balanced'` (Logistic Regression, Random Forest) and sample weighting (Gradient Boosting) — rather than synthetic resampling (SMOTE) — to keep the test set's real-world distribution intact for honest evaluation.
 
-Potential predictive features include:
+## Models Trained
 
-- Age groups  
-- Credit-score bands  
-- Balance bands  
-- Product depth  
-- Customer activity  
-- Credit-card ownership  
-- Geography  
-- Gender  
-- Tenure  
-- Financial exposure indicators  
-- Behavioural interaction features  
+| Model | Notes |
+|-------|-------|
+| Logistic Regression | Baseline linear model, `class_weight='balanced'` |
+| Random Forest | 300 trees, `class_weight='balanced'` |
+| Gradient Boosting | 200 estimators, sample-weighted for imbalance |
 
-Identifiers such as `CustomerId`, `RowNumber`, and `Surname` are excluded.
-
-A **leakage audit** is performed before model training to ensure that features do not contain information derived from the target or future customer outcomes.
+> **Note:** XGBoost was evaluated during development but excluded from the final pipeline after causing repeated local kernel crashes (an environment-level OpenMP/binary compatibility issue, not a data or methodology problem). The three-model comparison above already spans a linear model and two different ensemble/boosting strategies, which is sufficient for a robust, defensible comparison.
 
 ---
 
-## Model Development
+## 🏆 Model Selection: Best Model & Evaluation Method
 
-The modelling pipeline follows a reproducible preprocessing and evaluation framework.
+**Evaluation Method:** All three models were scored on the held-out 20% test set (never seen during training) across five metrics — Precision, Recall, F1, ROC-AUC, and PR-AUC.
 
-### Candidate Models
+**PR-AUC (Precision-Recall Area Under Curve)** was used as the primary, deciding metric — not raw accuracy and not ROC-AUC. With ~20% class imbalance, ROC-AUC can look artificially strong because it's diluted by a large number of easy true negatives. PR-AUC instead measures directly how well a model identifies the minority (churn) class without flooding Retention with false alerts — exactly the trade-off that matters for a real outreach campaign.
 
-- **Logistic Regression** — interpretable baseline  
-- **Random Forest** — non-linear ensemble  
-- **Gradient Boosting** — boosted tree model  
-- **XGBoost / LightGBM** — where available  
+### Test Set Results (ranked by PR-AUC)
 
-### Evaluation Metrics
+| Model | Precision | Recall | F1 | ROC-AUC | PR-AUC |
+|-------|-----------|--------|-----|---------|--------|
+| 🏆 Gradient Boosting | 0.51 | 0.76 | 0.61 | 0.87 | 0.71 |
+| Random Forest | 0.54 | 0.70 | 0.61 | 0.86 | 0.70 |
+| Logistic Regression | 0.44 | 0.75 | 0.56 | 0.84 | 0.64 |
 
-Because churn represents approximately 20% of the dataset, accuracy is **not** used as the primary success criterion.
+**Selected Model:** Gradient Boosting — highest PR-AUC (0.71) and highest ROC-AUC (0.87) of the three, with a strong recall/precision balance at the default threshold. Random Forest was a close second; Logistic Regression, as expected for a linear baseline, trailed both ensemble methods.
 
-Models are evaluated using:
-
-- Precision  
-- Recall  
-- F1 Score  
-- ROC-AUC  
-- PR-AUC  
-- Confusion Matrix  
-
-The final classification threshold is optimized according to the business cost of missed churners versus unnecessary retention interventions.
+> **Note:** due to the stochastic nature of ensemble training, Random Forest and Gradient Boosting occasionally trade places by a very small margin on re-runs — the notebook always dynamically selects and reports whichever model wins PR-AUC on that run, rather than hardcoding a winner.
 
 ---
 
-##  Threshold Optimization
+## 🎚 Threshold Optimization
 
-Rather than automatically using a 0.50 probability threshold, the model evaluates multiple thresholds to determine the most commercially appropriate operating point.
+The default 0.5 classification threshold is a statistical convention, not a business decision. Because missing a churner (false negative) costs the bank far more than one wasted retention offer (false positive), the threshold was re-optimized to favor recall, subject to a minimum precision floor of 35% (so outreach campaigns aren't mostly wasted effort).
 
-The objective is to balance:
-```text
-Churners Captured
-        ↓
-False Retention Alerts
-        ↓
-Intervention Capacity
-        ↓
-Financial Exposure Protected
+| | Default (0.5) | Business-Optimal (0.30) |
+|--|---------------|-------------------------|
+| Precision | ~0.51 | 0.351 |
+| Recall | ~0.76 | 0.892 |
+| F1 | ~0.61 | 0.504 |
 
-```
-
-This transforms the model from a purely statistical classifier into a **decision-support system**.
+At the business-optimal threshold, the model captures **89.2%** of actual churners in the test set — up from 76% at the default threshold — a deliberate trade of some precision for substantially more coverage of at-risk customers.
 
 ---
 
-## Model Explainability
+## 🔍 Model Explainability (SHAP)
 
-Model interpretation will identify the variables contributing most strongly to predicted churn.
+Beyond feature importances, SHAP (SHapley Additive exPlanations) was used to:
 
-The analysis will use:
-
-- Feature importance  
-- Permutation importance  
-- SHAP-based explanation (where appropriate)  
-- Customer-level prediction drivers  
-
-The objective is not only to predict churn but to explain:
-
-> **Why does the model believe this customer is at risk?**
-
-This enables the bank to connect predictions to appropriate retention actions.
+- Produce a global summary plot showing which features push predictions toward churn vs. retention across the whole test sample.
+- Generate a customer-level force plot for an example high-risk customer, showing exactly which features drove that individual's score — giving relationship managers a concrete talking point for every flagged customer, not just a black-box probability.
 
 ---
 
-## Customer Risk Scoring
+## 💰 Business Impact
 
-The final model will produce a customer-level risk score.
+Every customer was scored with the final model and assigned a risk tier:
 
-### Example Framework
+| Risk Tier | Customers | Avg. Churn Probability | Actual Churn Rate | Financial Exposure |
+|-----------|-----------|------------------------|-------------------|--------------------|
+| 🔴 Critical | 1,676 | 85.4% | 70.8% | $130.4M |
+| 🟠 High | 1,779 | 56.1% | 28.0% | $97.1M |
+| 🟡 Medium | 2,363 | 33.9% | 10.1% | $74.3M |
+| 🟢 Low | 4,182 | 12.7% | 2.7% | $36.6M |
 
-| Risk Tier  | Probability | Recommended Action       |
-|------------|-------------|--------------------------|
-| Critical   | Very High   | Immediate retention      |
-| High       | High        | Targeted intervention    |
-| Medium     | Moderate    | Engagement campaign      |
-| Low        | Low         | Standard monitoring      |
+### Deployment Impact (test set, business-optimal threshold)
 
-Risk scoring can then be combined with financial exposure to prioritize customers using a framework such as:
- > **Churn Probability × Customer Balance = Retention Priority**
+| Metric | Value |
+|--------|-------|
+| High-Risk Customers Flagged | 1,033 (of 2,000 test customers) |
+| Actual Churners Captured | 363 of 407 |
+| Churn Capture Rate (Recall) | 89.2% |
+| Balance Exposure Captured | $32,996,296 |
+| False Alerts (wasted outreach) | 670 |
+| Intervention Efficiency (Precision) | 35.1% |
 
-
-
-This ensures the bank does not simply target the customers most likely to churn, but prioritizes those where intervention could protect the **greatest value**.
-
----
-
-## Business Impact Framework
-
-The final ML evaluation will measure more than model accuracy.
-
-Key business metrics include:
-
-- High-risk customers identified  
-- Actual churners captured  
-- Churn recall  
-- False-positive customers  
-- Churned balance identified  
-- High-value customers captured  
-- Intervention coverage  
-- Retention opportunity by risk tier  
-
-The intended output is a **prioritized retention portfolio**, not merely a prediction label.
-
----
-
-## Recommended Retention Strategy
-
-Based on the EDA, the bank should consider a differentiated retention framework:
-
-1. **Protect High-Value At-Risk Customers**  
-   Prioritize customers combining high balance, inactivity, and elevated churn risk.
-
-2. **Reactivate Inactive Customers**  
-   Use targeted digital engagement campaigns to bring inactive customers back into regular banking activity.
-
-3. **Review Product Suitability**  
-   The exceptionally high churn observed among 3–4 product customers suggests the need to investigate product fit, complexity, or customer-product mismatch.
-
-4. **Use Selective Cross-Selling**  
-   Two-product customers demonstrate substantially lower churn, while active single-product customers represent a potential cross-sell opportunity.
-
-5. **Prioritize Geographic Risk**  
-   Germany requires specific retention investigation given its materially higher churn rate.
-
-6. **Use Predictive Risk Scoring**  
-   Move from reactive churn reporting toward proactive customer-level intervention.
-
----
-
-## Executive Takeaway
-
-The analysis demonstrates that bank churn is **not evenly distributed** across the customer base.
-
-The greatest opportunities lie in identifying the intersection of:
-
-> **Customer Risk × Behaviour × Product Relationship × Financial Exposure**
-
-The strongest signals identified include:
-
-- Age concentration  
-- Geographic concentration  
-- Product-depth effects  
-- Customer inactivity  
-- Financial exposure  
-
-The resulting framework moves the analysis from:
-
-> “20.37% of customers churned”
-
-to:
-
-> “Which customers are at risk, why they are at risk, how much value is exposed, and what intervention should happen next?”
-
-That is the foundation for a scalable **customer retention analytics and predictive churn management framework**.
-
----
+**Bottom line:** at the business-optimal threshold, the model would flag roughly **51.6%** of the customer base for outreach and capture **~89%** of would-be churners within that group — a targeted, ranked, dollar-weighted list that is dramatically more efficient than a blanket campaign to all 10,000 customers.
 
 ## Technology Stack
 
@@ -543,8 +446,6 @@ Data Analyst | Procurement & Business Analytics Professional
 
 ### Core Focus
 Data Analytics • SQL • Python • Power BI • Machine Learning • Procurement Analytics • Business Intelligence
-
-**Portfolio:** [GitHub](https://github.com/)
 
 ---
 
